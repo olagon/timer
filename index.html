@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timer</title>
+<meta name="description" content="A quiet countdown timer with a warning chime and a spoken finish.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='17' r='11' fill='none' stroke='%23e0a44c' stroke-width='2.5'/%3E%3Cpath d='M16 11v6l4 2' stroke='%23e0a44c' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0e1013; --bg-2:#15181d; --line:#262b33;
+  --ink:#eef1f5; --ink-dim:#9aa3b0; --ink-faint:#5d6672;
+  --accent:#6ea8fe; --warn:#e0a44c; --done:#7fd1a5;
+  --ring-track:#222730;
+  --radius:16px;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f6f7f9; --bg-2:#ffffff; --line:#e3e6ec;
+    --ink:#161a1f; --ink-dim:#5d6672; --ink-faint:#949cab;
+    --accent:#2f6fd0; --warn:#b97a16; --done:#2e8c62;
+    --ring-track:#e6e9ef;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-weight:400; -webkit-font-smoothing:antialiased;
+  display:flex; flex-direction:column; align-items:center;
+  padding:40px 16px 56px;
+}
+.wrap{width:100%; max-width:440px; display:flex; flex-direction:column; align-items:center; gap:26px}
+header{text-align:center}
+h1{
+  margin:0; font-size:13px; font-weight:500; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-faint);
+}
+
+/* ---- dial ---- */
+.dial{position:relative; width:288px; height:288px; flex:none}
+.dial svg{width:100%; height:100%; transform:rotate(-90deg)}
+.dial circle{fill:none; stroke-width:6; stroke-linecap:round}
+.track{stroke:var(--ring-track)}
+.prog{
+  stroke:var(--accent); stroke-dasharray:816.81;
+  transition:stroke .5s ease;
+}
+.readout{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:6px;
+}
+.time{
+  font-size:58px; font-weight:300; letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums; line-height:1;
+}
+.state{
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-faint); min-height:14px;
+}
+body.warned .prog{stroke:var(--warn)}
+body.warned .state{color:var(--warn)}
+body.over .prog{stroke:var(--done)}
+body.over .state{color:var(--done)}
+body.over .time{color:var(--done)}
+
+/* ---- controls ---- */
+.row{display:flex; gap:10px; width:100%}
+.field{flex:1; display:flex; flex-direction:column; gap:7px}
+label{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint)}
+input[type=text]{
+  width:100%; padding:11px 13px; border-radius:12px;
+  border:1px solid var(--line); background:var(--bg-2); color:var(--ink);
+  font:inherit; font-size:16px; font-variant-numeric:tabular-nums;
+  text-align:center; letter-spacing:.02em;
+}
+input:focus-visible,button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+button{
+  font:inherit; cursor:pointer; border-radius:12px; border:1px solid var(--line);
+  background:var(--bg-2); color:var(--ink); padding:11px 18px;
+  transition:border-color .15s ease, background .15s ease, opacity .15s ease;
+}
+button:hover{border-color:var(--ink-faint)}
+.primary{
+  flex:1; background:var(--ink); color:var(--bg); border-color:var(--ink);
+  font-weight:500; letter-spacing:.02em;
+}
+.primary:hover{opacity:.88; border-color:var(--ink)}
+.ghost{color:var(--ink-dim)}
+
+/* ---- presets ---- */
+.presets{width:100%; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.chip{
+  display:inline-flex; align-items:center; gap:0;
+  border:1px solid var(--line); border-radius:999px; background:var(--bg-2);
+  overflow:hidden;
+}
+.chip button{border:0; border-radius:0; background:none; padding:7px 13px; font-size:13px}
+.chip .load{color:var(--ink); display:flex; flex-direction:column; align-items:flex-start; gap:1px; text-align:left}
+.chip .load small{color:var(--ink-faint); font-size:10.5px; letter-spacing:.04em; font-variant-numeric:tabular-nums}
+.chip .del{color:var(--ink-faint); padding:7px 11px 7px 4px; font-size:14px; line-height:1}
+.chip .del:hover{color:var(--warn)}
+.chip:hover{border-color:var(--ink-faint)}
+.add{font-size:13px; padding:8px 14px; color:var(--ink-dim); border-style:dashed}
+.empty{font-size:12.5px; color:var(--ink-faint)}
+footer{margin-top:4px; font-size:11.5px; color:var(--ink-faint); text-align:center; line-height:1.7}
+footer a{color:var(--ink-faint)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:380px){ .dial{width:252px;height:252px} .time{font-size:50px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Timer</h1></header>
+
+  <div class="dial">
+    <svg viewBox="0 0 288 288" aria-hidden="true">
+      <circle class="track" cx="144" cy="144" r="130"></circle>
+      <circle class="prog" cx="144" cy="144" r="130" stroke-dashoffset="0"></circle>
+    </svg>
+    <div class="readout">
+      <div class="time" id="display" role="timer" aria-live="off">25:00</div>
+      <div class="state" id="state"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label for="total">Length</label>
+      <input type="text" id="total" value="25:00" inputmode="numeric" autocomplete="off" aria-describedby="hint">
+    </div>
+    <div class="field">
+      <label for="warn">Warn at</label>
+      <input type="text" id="warn" value="5:00" inputmode="numeric" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="primary" id="go">Start</button>
+    <button class="ghost" id="reset">Reset</button>
+  </div>
+
+  <div class="presets" id="presets"></div>
+
+  <footer>
+    <span id="hint">mm:ss, or a plain number for minutes · space to start, R to reset</span><br>
+    Open source, MIT · <a href="https://github.com/olagon/timer">source</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const display = $('display'), stateEl = $('state'), prog = document.querySelector('.prog');
+  const totalIn = $('total'), warnIn = $('warn'), go = $('go'), resetBtn = $('reset');
+  const CIRC = 816.81, KEY = 'timer.presets';
+
+  // "25" -> 1500s (minutes), "25:00" -> 1500s, "1:30:00" -> 5400s
+  const parse = s => {
+    const parts = String(s).trim().split(':').map(p => parseInt(p, 10) || 0);
+    if (!parts.length) return 0;
+    const secs = parts.reduce((a, p) => a * 60 + p, 0);
+    return parts.length === 1 ? secs * 60 : secs;
+  };
+  const fmt = s => {
+    s = Math.max(0, Math.ceil(s));
+    const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    const pad = n => String(n).padStart(2, '0');
+    return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  };
+
+  // ---- sound: synthesized, no assets ----
+  let ac;
+  const audio = () => {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  };
+  const tone = (freq, at, dur, peak) => {
+    const c = audio(), t = c.currentTime + at;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(peak, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(c.destination);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  };
+  const chime = () => { tone(880, 0, 1.4, 0.16); tone(1318.5, 0.13, 1.5, 0.11); };
+  const say = text => {
+    const s = window.speechSynthesis;
+    if (!s) return;
+    s.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95; u.pitch = 1; u.volume = 0.85;
+    s.speak(u);
+  };
+  const finish = () => {
+    tone(523.25, 0, 1.6, 0.14); tone(392, 0.18, 1.8, 0.12);
+    setTimeout(() => say('The time is over.'), 700);
+  };
+
+  // ---- state ----
+  let total = 1500, warnAt = 300, remaining = 1500, deadline = 0, running = false, warned = false, ticker = 0;
+
+  const readInputs = () => {
+    total = Math.max(1, parse(totalIn.value) || 1);
+    warnAt = Math.min(parse(warnIn.value), total);
+    totalIn.value = fmt(total);
+    warnIn.value = fmt(warnAt);
+  };
+
+  const render = () => {
+    display.textContent = fmt(remaining);
+    prog.style.strokeDashoffset = CIRC * (1 - (total ? Math.max(0, remaining) / total : 0));
+    document.body.classList.toggle('warned', warned && remaining > 0);
+    document.body.classList.toggle('over', remaining <= 0 && !running);
+    go.textContent = running ? 'Pause' : (remaining < total && remaining > 0 ? 'Resume' : 'Start');
+    stateEl.textContent = remaining <= 0 && !running ? 'Time is over'
+      : running ? (warned ? 'Finishing up' : 'Running') : '';
+    document.title = running ? `${fmt(remaining)} · Timer` : 'Timer';
+  };
+
+  const tick = () => {
+    remaining = (deadline - Date.now()) / 1000;
+    if (!warned && warnAt > 0 && remaining <= warnAt) { warned = true; chime(); }
+    if (remaining <= 0) {
+      remaining = 0; running = false; clearInterval(ticker); finish();
+    }
+    render();
+  };
+
+  const start = () => {
+    if (remaining <= 0 || remaining >= total) { readInputs(); remaining = total; warned = false; }
+    audio();
+    deadline = Date.now() + remaining * 1000;
+    running = true;
+    clearInterval(ticker);
+    ticker = setInterval(tick, 200);
+    render();
+  };
+  const pause = () => { running = false; clearInterval(ticker); remaining = Math.max(0, (deadline - Date.now()) / 1000); render(); };
+  const reset = () => {
+    running = false; warned = false; clearInterval(ticker);
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    readInputs(); remaining = total; render();
+  };
+
+  go.addEventListener('click', () => running ? pause() : start());
+  resetBtn.addEventListener('click', reset);
+  [totalIn, warnIn].forEach(el => el.addEventListener('change', () => { if (!running) reset(); }));
+
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.code === 'Space') { e.preventDefault(); running ? pause() : start(); }
+    else if (e.key.toLowerCase() === 'r') reset();
+  });
+
+  // ---- saved times ----
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
+  const save = list => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} };
+
+  const drawPresets = () => {
+    const list = load(), box = $('presets');
+    box.textContent = '';
+    list.forEach((p, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      const b = document.createElement('button');
+      b.className = 'load';
+      b.append(document.createTextNode(p.name));
+      const sub = document.createElement('small');
+      sub.textContent = `${fmt(p.total)} · warn ${fmt(p.warn)}`;
+      b.append(sub);
+      b.title = 'Load this time';
+      b.addEventListener('click', () => {
+        totalIn.value = fmt(p.total); warnIn.value = fmt(p.warn); reset();
+      });
+      const x = document.createElement('button');
+      x.className = 'del'; x.textContent = '×'; x.title = `Delete ${p.name}`;
+      x.setAttribute('aria-label', `Delete ${p.name}`);
+      x.addEventListener('click', () => { const l = load(); l.splice(i, 1); save(l); drawPresets(); });
+      chip.append(b, x);
+      box.append(chip);
+    });
+    const add = document.createElement('button');
+    add.className = 'add';
+    add.textContent = '+ Save current';
+    add.addEventListener('click', () => {
+      readInputs();
+      const name = prompt('Name this time', `${fmt(total)}`);
+      if (!name) return;
+      const l = load();
+      l.push({ name: name.trim().slice(0, 24), total, warn: warnAt });
+      save(l); drawPresets();
+    });
+    box.append(add);
+    if (!list.length) {
+      const hint = document.createElement('span');
+      hint.className = 'empty';
+      hint.textContent = 'no saved times yet';
+      box.append(hint);
+    }
+  };
+
+  if (!localStorage.getItem(KEY)) save([
+    { name: 'Pomodoro', total: 1500, warn: 300 },
+    { name: 'Short break', total: 300, warn: 60 },
+    { name: 'Standup', total: 900, warn: 180 },
+  ]);
+
+  readInputs(); remaining = total; render(); drawPresets();
+})();
+</script>
+</body>
+</html>
